@@ -282,6 +282,8 @@ class LexicalGraphIndex():
         tenant_id = to_tenant_id(tenant_id)
 
         self.graph_store = MultiTenantGraphStore.wrap(GraphStoreFactory.for_graph_store(graph_store), tenant_id)
+         # Run backend-specific schema/bootstrap hook (idempotent by contract).
+        self.graph_store.init()
         self.vector_store = MultiTenantVectorStore.wrap(VectorStoreFactory.for_vector_store(vector_store), tenant_id)
         self.tenant_id = tenant_id or TenantId()
         self.extraction_dir = extraction_dir or DEFAULT_EXTRACTION_DIR
