@@ -142,7 +142,7 @@ class FactGraphBuilder(GraphBuilder):
                 query=f"""// get start and end facts for prev conection
                 UNWIND $params AS params
                 MATCH (fact:`__Fact__`{{{graph_client.node_id("factId")}: params.fact_id}})<-[:`__SUBJECT__`]-(:`__Entity__`)-[:`__OBJECT__`]->(prevFact:`__Fact__`)
-                WHERE fact <> prevFact
+                WHERE fact <> nextFact
                 RETURN {graph_client.node_id('prevFact.factId')} AS startId, {graph_client.node_id('fact.factId')} AS endId
                 """,
                 child_queries=[create_next_relationship]
@@ -152,7 +152,7 @@ class FactGraphBuilder(GraphBuilder):
                 'fact_id': fact.factId
             }
 
-            query_tree = QueryTree('insert-prev-facts', find_start_end_for_prev_facts)
+            query_tree = QueryTree('insert-prev-facts', find_start_end_for_next_facts)
 
             graph_client.execute_query_with_retry(query_tree, self._to_params(params), max_attempts=10, max_wait=10)
 
@@ -162,7 +162,7 @@ class FactGraphBuilder(GraphBuilder):
                     query=f"""// get start and end facts for next conection
                     UNWIND $params AS params
                     MATCH (fact:`__Fact__`{{{graph_client.node_id("factId")}: params.fact_id}})<-[:`__OBJECT__`]-(:`__Entity__`)-[:`__SUBJECT__`]->(nextFact:`__Fact__`)
-                    WHERE fact <> prevFact
+                    WHERE fact <> nextFact
                     RETURN {graph_client.node_id('fact.factId')} AS startId, {graph_client.node_id('nextFact.factId')} AS endId
                     """,
                     child_queries=[create_next_relationship]
