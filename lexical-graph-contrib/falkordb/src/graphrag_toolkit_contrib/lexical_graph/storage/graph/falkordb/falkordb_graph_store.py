@@ -84,6 +84,41 @@ class FalkorDBDatabaseClient(GraphStore):
         self._client = None
         return super().__getstate__()
     
+    def init(self, graph_store=None):
+        """
+        Initialize FalkorDB schema prerequisites for lexical graph ingestion.
+
+        This lifecycle hook is invoked by the toolkit to 
+        ensure required indexes exist before MERGE-heavy writes.
+        The operation is idempotent: index-already-exists errors are ignored so
+        repeated startup calls are safe.
+        """        
+        graph_store = graph_store or self
+
+        ops = [
+            "CREATE INDEX FOR (n:`__Entity__`) ON (n.entityId)",
+            "CREATE INDEX FOR (n:`__Fact__`) ON (n.factId)",
+            "CREATE INDEX FOR (n:`__Statement__`) ON (n.statementId)",
+            "CREATE INDEX FOR (n:`__Topic__`) ON (n.topicId)",
+            "CREATE INDEX FOR (n:`__Chunk__`) ON (n.chunkId)",
+            "CREATE INDEX FOR (n:`__Source__`) ON (n.sourceId)",
+            "CREATE INDEX FOR (n:`__Entity__`) ON (n.search_str)",
+        ]
+
+        for op in ops:
+            try:
+                graph_store.execute_query_with_retry(op, {})
+            except Exception as e:
+                msg = str(e).lower()
+                if (
+                    "already exists" in msg
+                    or "equivalent index already exists" in msg
+                    or "duplicate" in msg
+                ):
+                    logger.debug(f"Index already exists, skipping: {op}")
+                    continue
+                raise    
+    
     @property
     def client(self) -> Graph:
         """
